@@ -1,5 +1,5 @@
 from __future__ import division
-import requests, json, sys
+import requests, cjson, sys
 
 API_KEY  = 'A87A9A-37FB-9841-8695-0C26E6569DD6A166D4B1-D896-4379-B147-9C3938284852'
 LIST_API = 'https://api.guildwars2.com/v2/commerce/listings/{}'
@@ -40,7 +40,7 @@ if __name__ == '__main__':
     itemPrice = []
 
     if prefixDustPrice < 0:
-        dustJson = json.loads(requests.get(LIST_API.format(24277)).content)
+        dustJson = cjson.decode(requests.get(LIST_API.format(24277)).content)
         dustWait = dustJson['buys'][0]
         dustInst = dustJson['sells']
 
@@ -70,8 +70,10 @@ if __name__ == '__main__':
         #endfor
     #endif
 
+    print '\nLoading materials information...'
+
     for mats, prod, name in itemIds:
-        matsJson = json.loads(requests.get(LIST_API.format(mats)).content)
+        matsJson = cjson.decode(requests.get(LIST_API.format(mats)).content)
         matsWait = matsJson['buys'][0]
         matsInst = matsJson['sells']
 
@@ -97,7 +99,7 @@ if __name__ == '__main__':
             #endelse
         #endfor
 
-        prodJson = json.loads(requests.get(LIST_API.format(prod)).content)
+        prodJson = cjson.decode(requests.get(LIST_API.format(prod)).content)
         prodWait = prodJson['sells'][0]
         prodInst = prodJson['buys']
 
