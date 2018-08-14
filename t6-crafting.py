@@ -1,7 +1,6 @@
 from __future__ import division
 import requests, cjson, sys
 
-API_KEY  = 'A87A9A-37FB-9841-8695-0C26E6569DD6A166D4B1-D896-4379-B147-9C3938284852'
 LIST_API = 'https://api.guildwars2.com/v2/commerce/listings/{}'
 
 if __name__ == '__main__':
