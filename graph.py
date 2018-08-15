@@ -1,5 +1,6 @@
 from __future__ import division
 from calculations import *
+from mpldatacursor import datacursor
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -62,10 +63,10 @@ fig, ax = plt.subplots(figsize=(14, 7))
 width = 0.12
 
 ind = np.arange(N)
-p1  = ax.bar(ind, boso, width, color='g', bottom=0)
-p2  = ax.bar(ind + width, biso, width, color='b', bottom=0)
-p3  = ax.bar(ind + 2 * width, bosi, width, color='y', bottom=0)
-p4  = ax.bar(ind + 3 * width, bisi, width, color='r', bottom=0)
+subBar1  = ax.bar(ind, boso, width, color='g', bottom=0)
+subBar2  = ax.bar(ind + width, biso, width, color='b', bottom=0)
+subBar3  = ax.bar(ind + 2 * width, bosi, width, color='y', bottom=0)
+subBar4  = ax.bar(ind + 3 * width, bisi, width, color='r', bottom=0)
 
 ax.set_title('T6 Trophy Crafting\nDust BO: {}\n'.format(dustUnitPrice))
 ax.set_xlabel('Trophy Type [BO/SO]', labelpad=10)
@@ -82,11 +83,60 @@ ax.set_xticklabels([
     'Venom\n{}/{}'.format(itemUnitPrices[6, 0], itemUnitPrices[6, 1])
 ], ha='center')
 ax.legend((
-    p1[0], p2[0], p3[0], p4[0]),
+    subBar1[0], subBar2[0], subBar3[0], subBar4[0]),
     ('Buy Order; Sell Order', 'Buy Instant; Sell Order', 'Buy Order; Sell Instant', 'Buy Instant; Sell Instant'
 ))
 
 ax.grid(True)
 ax.autoscale_view()
+
+print itemTotalProfit
+
+## Attach a text label above each bar displaying its height.
+def updateLabel(rects):
+    for rect in rects:
+        rectWidth  = rect.get_width()
+        rectHeight = rect.get_height()
+        txt = ax.text(rect.get_x() + rectWidth / 2, rectHeight + np.sign(rectHeight) * 600, int(rectHeight), ha='center', va='center')
+    #endfor
+#enddef
+
+def onclick(event):
+    if event.inaxes != ax and txt.get_text():
+        txt.set_text('')
+        plt.draw()
+    #endif
+
+    contained = -1
+    for i in range(9):
+        rect = b[i]
+        contains, attrd = rect.contains(event)
+
+        if contains and contained != i:
+            autolabel(rect)
+            contained = i
+        #endif
+    #endfor
+    if contained == -1:
+        txt.set_text('')
+        plt.draw()
+#enddef
+
+def hover(event):
+    # vis = annot.get_visible()
+    if event.inaxes == ax:
+        cont, ind = subBar1.contains(event)
+        if cont:
+            if not txt: autolabel(subBar1)
+            # annot.set_visible(True)
+            # fig.canvas.draw_idle()
+        else:
+            if txt: txt.remove()
+            #endif
+        #endelse
+    #endelse
+#enddef
+
+# fig.canvas.mpl_connect('motion_notify_event', hover)
 
 plt.show()
