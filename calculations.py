@@ -53,7 +53,7 @@ def sOrdr(itemId, quantity):
     prodWait = prodJson['sells'][0]['unit_price']
     prodGain = prodWait * quantity
 
-    return { 'totalPrice': prodGain * 0.85 , 'unitPrice': prodWait * 0.85 }
+    return { 'totalPrice': prodGain * 0.85 , 'unitPrice': prodWait }
 #enddef
 
 def sInst(itemId, quantity):
@@ -81,5 +81,5 @@ def sInst(itemId, quantity):
         #endelse
     #endfor
 
-    return { 'totalPrice': prodGain * 0.85 , 'unitPrice': prodGain * 0.85 / quantity }
+    return { 'totalPrice': prodGain * 0.85 , 'unitPrice': prodGain / quantity }
 #enddef
