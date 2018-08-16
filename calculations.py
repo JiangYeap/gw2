@@ -3,12 +3,13 @@ import requests, json
 
 LIST_API = 'https://api.guildwars2.com/v2/commerce/listings/{}'
 
-def currencyPrint(amount):
+def currencyConv(amount):
     copper = int(round(amount % 100))
     silver = int((amount % 10000) / 100)
     gold   = int(amount / 10000)
+    sign   = '+' if amount >= 0 else '-'
 
-    return '{}g {}s {}c'.format(gold, silver, copper)
+    return '{} {}g {}s {}c'.format(sign, gold, silver, copper)
 #enddef
 
 def bOrdr(itemId, quantity):

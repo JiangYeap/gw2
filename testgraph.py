@@ -1,4 +1,5 @@
 from __future__ import division
+from calculations import *
 
 import string
 import matplotlib.pyplot as plt
@@ -112,7 +113,7 @@ def updateLabel(subBar):
         label = allLabels[i]
         rectWidth  = rect.get_width()
         rectHeight = rect.get_height()
-        label.set_text(int(rectHeight))
+        label.set_text(currencyConv(rectHeight))
         label.set_position((rect.get_x() + rectWidth / 2, rectHeight + np.sign(rectHeight) * 500))
     #endfor
 #enddef
@@ -146,19 +147,16 @@ def resetLabelAndFocus():
 
 def onclick(event):
     global selected
-
     if event.inaxes != ax and selected > -1:
         resetLabelAndFocus()
         selected = -1
         plt.draw()
         return
     #endif
-
     for i in range(len(allBars)):
         subBar = allBars[i]
         for rect in subBar:
             contains, attrd = rect.contains(event)
-
             if contains and selected != i:
                 updateLabel(subBar)
                 updateFocus(allBars, i)
@@ -168,6 +166,7 @@ def onclick(event):
             #endif
         #endfor
     #endfor
+#enddef
 
 def onhover(event):
     global selected
@@ -193,11 +192,6 @@ def onhover(event):
             #endif
         #endfor
     #endfor
-
-    resetLabelAndFocus()
-    selected = -1
-    plt.draw()
-#enddef
 
     resetLabelAndFocus()
     selected = -1
