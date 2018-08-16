@@ -3,6 +3,18 @@ import requests, json
 
 LIST_API = 'https://api.guildwars2.com/v2/commerce/listings/{}'
 
+def niceRound(num, maxDp):
+    numComp = str(num).split('.')
+    if float(num).is_integer():
+        return int(num)
+    elif len(numComp[1]) < maxDp:
+        return num
+    else:
+        return float('{}.{}'.format(numComp[0], numComp[1][:maxDp]))
+    #endelse
+#enddef
+
+
 def currencyConv(amount):
     copper = int(round(amount % 100))
     silver = int((amount % 10000) / 100)
