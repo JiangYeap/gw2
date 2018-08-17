@@ -1,5 +1,6 @@
 from __future__ import division
-from calculations import *
+from merchant import *
+from item import *
 
 import thread
 import numpy as np
@@ -7,56 +8,64 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patch
 
 class T6Graph:
-    ITEM_IDS = [
-        [24294, 24295, 'Blood'],
-        [24341, 24358, 'Bone'],
-        [24350, 24351, 'Claw'],
-        [24356, 24357, 'Fang'],
-        [24288, 24289, 'Scale'],
-        [24299, 24300, 'Totem'],
-        [24282, 24283, 'Venom']
+    PROD_IDS = [
+        [24295, 'Blood'],
+        [24358, 'Bone'],
+        [24351, 'Claw'],
+        [24357, 'Fang'],
+        [24289, 'Scale'],
+        [24300, 'Totem'],
+        [24283, 'Venom']
     ]
-    COLOR_CATEGORY = ['#2ecc71', '#3498db', '#f1c40f', '#e74c3c']
+    MATS_IDS = [
+        [24294, 'Vial of Potent Blood'],
+        [24341, 'Large Bone'],
+        [24350, 'Large Claw'],
+        [24356, 'Large Fang'],
+        [24288, 'Large Scale'],
+        [24299, 'Intricate Totem'],
+        [24282, 'Potent Venom'],
+        [24277, 'Pile of Crystalline Dust']
+    ]
     TYPES = 7
     N_BAR = 4
-    INDEX = range(TYPES)
     WIDTH = 0.16
     TITLE = 'T6 Trophy Crafting Profit Per Stack\nDust B{}: {}'
     LABEL = 'Trophy Type [B{0} | S{0}]'
+    LEGEND_LABELS = [
+        'Buy Order; Sell Order',
+        'Buy Instant; Sell Order',
+        'Buy Order; Sell Instant',
+        'Buy Instant; Sell Instant'
+    ]
+    COLOR_CATEGORY = ['#2ecc71', '#3498db', '#f1c40f', '#e74c3c']
 
     def __init__(self, stacks=1, dustPrice=None):
-        self.stacks = stacks
-        self.matsQuantity = 250 * stacks
         self.dustQuantity = 25 * stacks
+        self.matsQuantity = 250 * stacks
         self.prodQuantity = 30 * stacks
+        self.fixedDustPrice = dustPrice
+        self.prodItems = [Item(self.PROD_IDS[i][0], self.PROD_IDS[i][1]) for i in range(self.TYPES)]
+        self.matsItems = [Item(self.MATS_IDS[i][0], self.MATS_IDS[i][1]) for i in range(self.TYPES)]
+        self.matsItems.append(Item(self.MATS_IDS[7][0], self.MATS_IDS[7][1]))
+        self.merchant = Merchant()
         self.fig, self.ax = plt.subplots(figsize=(14, 7))
-        self.priceType = [0, 2, 'O']
+        self.priceType = 'O'
         self.updating = False
         self.selected = -1
-        try:
-            self.fixedDustPrice = int(dustPrice)
-        except (TypeError, ValueError):
-            self.fixedDustPrice = None
-        #endexcept
         self.initGraph()
         self.updateGraph()
         plt.show()
     #enddef
 
     def initGraph(self):
-        self.allBars = [self.ax.bar([x + i * self.WIDTH for x in self.INDEX], [i] * self.TYPES, self.WIDTH, color=self.COLOR_CATEGORY[i], bottom=0) for i in range(self.N_BAR)]
+        self.allBars = [self.ax.bar([j + i * self.WIDTH for j in range(self.TYPES)], [i] * self.TYPES, self.WIDTH, color=self.COLOR_CATEGORY[i], bottom=0) for i in range(self.N_BAR)]
         self.allBarlabels = [self.ax.text(i, i, '', ha='center', va='center') for i in range(self.TYPES)]
         self.fig.canvas.mpl_connect('motion_notify_event', self.onhover)
         self.fig.canvas.mpl_connect('button_press_event', self.onclick)
         self.ax.set_ylabel('Net Profit')
-        self.ax.set_xticks([x + 1.5 * self.WIDTH for x in self.INDEX])
-        self.ax.legend(
-            [subBar[0] for subBar in self.allBars],
-            ['Buy Order; Sell Order', 'Buy Instant; Sell Order', 'Buy Order; Sell Instant', 'Buy Instant; Sell Instant'],
-            loc='best',
-            fancybox=True,
-            framealpha=0.5
-        )
+        self.ax.set_xticks([i + 1.5 * self.WIDTH for i in range(self.TYPES)])
+        self.ax.legend([subBar[0] for subBar in self.allBars], self.LEGEND_LABELS, loc='best', fancybox=True, framealpha=0.5)
         self.ax.grid(True)
     #enddef
 
@@ -65,15 +74,10 @@ class T6Graph:
         self.getItemPrices()
         for i in range(self.N_BAR):
             for j in range(self.TYPES):
-                self.allBars[i].patches[j].set_height(self.itemTotalProfit[j][i])
+                self.allBars[i].patches[j].set_height(self.netProfits[j][i])
             #endfor
         #endfor
-        self.ax.set_title(self.TITLE.format(self.priceType[2], self.dustUnitPrice[self.priceType[0]]))
-        self.ax.set_xlabel(self.LABEL.format(self.priceType[2]), labelpad=10)
-        self.ax.set_xticklabels(
-            ['{}\n{} | {}'.format(self.ITEM_IDS[i][2], self.itemUnitPrices[i][self.priceType[0]], self.itemUnitPrices[i][self.priceType[1]]) for i in range(self.TYPES)],
-            ha='center'
-        )
+        self.updateTickLabel('price')
         self.ax.relim()
         self.ax.autoscale_view()
         plt.draw()
@@ -81,31 +85,65 @@ class T6Graph:
     #enddef
 
     def getItemPrices(self):
-        self.itemPrices = []
-        self.itemUnitPrices = []
-        self.itemTotalProfit = []
-        if self.fixedDustPrice:
-            self.dustPrice = [self.fixedDustPrice * self.dustQuantity] * 2
-            self.dustUnitPrice = [self.fixedDustPrice] * 2
+        prodPrices = [self.merchant.trade('s', self.prodItems[i], self.prodQuantity) for i in range(self.TYPES)]
+        matsPrices = [self.merchant.trade('b', self.matsItems[i], self.matsQuantity) for i in range(self.TYPES)]
+        if self.fixedDustPrice is not None:
+            dustUnit = int(self.fixedDustPrice)
+            assert dustUnit >= 0
+            totlPrices = {'O': dustUnit * self.dustQuantity, 'I': dustUnit * self.dustQuantity}
+            unitPrices = {'O': dustUnit, 'I': dustUnit}
+            matsPrices.append({'totl': totlPrices, 'unit': unitPrices})
         else:
-            self.dustPrice = [bOrdr(24277, self.dustQuantity), bInst(24277, self.dustQuantity)]
-            self.dustUnitPrice = [niceRound(self.dustPrice[i]['unitPrice'], 2) for i in range(2)]
+            matsPrices.append(self.merchant.trade('b', self.matsItems[7], self.dustQuantity))
         #endelse
-        for i in range(self.TYPES):
-            self.itemPrices.append([
-                bOrdr(self.ITEM_IDS[i][0], self.matsQuantity),
-                bInst(self.ITEM_IDS[i][0], self.matsQuantity),
-                sOrdr(self.ITEM_IDS[i][1], self.prodQuantity),
-                sInst(self.ITEM_IDS[i][1], self.prodQuantity)
-            ])
-            self.itemTotalProfit.append([
-                self.itemPrices[i][2]['totalPrice'] - self.itemPrices[i][0]['totalPrice'] - self.dustPrice[0]['totalPrice'],
-                self.itemPrices[i][2]['totalPrice'] - self.itemPrices[i][1]['totalPrice'] - self.dustPrice[1]['totalPrice'],
-                self.itemPrices[i][3]['totalPrice'] - self.itemPrices[i][0]['totalPrice'] - self.dustPrice[0]['totalPrice'],
-                self.itemPrices[i][3]['totalPrice'] - self.itemPrices[i][1]['totalPrice'] - self.dustPrice[1]['totalPrice']
-            ])
-            self.itemUnitPrices.append([niceRound(self.itemPrices[i][j]['unitPrice'], 2) for j in range(4)])
+        self.netProfits = [[
+            prodPrices[i]['totl']['O'] - matsPrices[i]['totl']['O'] - matsPrices[7]['totl']['O'],
+            prodPrices[i]['totl']['O'] - matsPrices[i]['totl']['I'] - matsPrices[7]['totl']['I'],
+            prodPrices[i]['totl']['I'] - matsPrices[i]['totl']['O'] - matsPrices[7]['totl']['O'],
+            prodPrices[i]['totl']['I'] - matsPrices[i]['totl']['I'] - matsPrices[7]['totl']['I']
+        ] for i in range(self.TYPES)]
+        self.prodUnitPrices = [prodPrices[i]['unit'] for i in range(self.TYPES)]
+        self.matsUnitPrices = [matsPrices[i]['unit'] for i in range(8)]
+    #enddef
+
+    ## Handles mouse hover events.
+    def onhover(self, event):
+        if event.inaxes != self.ax and self.selected > -1:
+            self.resetBarlabelAndFocus()
+            self.selected = -1
+            plt.draw()
+            return
+        #endif
+        for i in range(self.N_BAR):
+            subBar = self.allBars[i]
+            for rect in subBar:
+                contains, attrd = rect.contains(event)
+                if contains:
+                    self.updateBarlabel(subBar)
+                    self.updateFocus(i)
+                    self.selected = i
+                    plt.draw()
+                    return
+                #endif
+            #endfor
         #endfor
+        self.resetBarlabelAndFocus()
+        self.selected = -1
+        plt.draw()
+    #enddef
+
+    ## Handles mouse click events.
+    def onclick(self, event):
+        if self.updating:
+            return
+        #endif
+        if event.inaxes != self.ax:
+            self.updatePriceType()
+            return
+        #endif
+        self.updateTickLabel('load')
+        plt.draw()
+        thread.start_new_thread(self.updateGraph, ())
     #enddef
 
     ## Attach a text label above each bar displaying its height.
@@ -115,7 +153,7 @@ class T6Graph:
             barlabel = self.allBarlabels[i]
             rectWidth = rect.get_width()
             rectHeight = rect.get_height()
-            barlabel.set_text(currencyConv(rectHeight))
+            barlabel.set_text(self.merchant.currencyConv(rectHeight))
             barlabel.set_position((rect.get_x() + rectWidth /  2, rectHeight + np.sign(rectHeight) * 300))
         #endfor
     #enddef
@@ -154,66 +192,29 @@ class T6Graph:
         if self.updating:
             return
         #endif
-        if self.priceType[2] == 'O':
-            self.priceType[0] = 1
-            self.priceType[1] = 3
-            self.priceType[2] = 'I'
+        if self.priceType == 'O':
+            self.priceType = 'I'
         else:
-            self.priceType[0] = 0
-            self.priceType[1] = 2
-            self.priceType[2] = 'O'
+            self.priceType = 'O'
         #endelse
-        self.ax.set_title(self.TITLE.format(self.priceType[2], self.dustUnitPrice[self.priceType[0]]))
-        self.ax.set_xlabel(self.LABEL.format(self.priceType[2]), labelpad=10)
-        self.ax.set_xticklabels(
-            ['{}\n{} | {}'.format(self.ITEM_IDS[i][2], self.itemUnitPrices[i][self.priceType[0]], self.itemUnitPrices[i][self.priceType[1]]) for i in range(self.TYPES)],
-            ha='center'
-        )
+        self.updateTickLabel('price')
         plt.draw()
     #enddef
 
-    ## Handles mouse hover events.
-    def onhover(self, event):
-        if event.inaxes != self.ax and self.selected > -1:
-            self.resetBarlabelAndFocus()
-            self.selected = -1
-            plt.draw()
-            return
-        #endif
-        for i in range(self.N_BAR):
-            subBar = self.allBars[i]
-            for rect in subBar:
-                contains, attrd = rect.contains(event)
-                if contains:
-                    self.updateBarlabel(subBar)
-                    self.updateFocus(i)
-                    self.selected = i
-                    plt.draw()
-                    return
-                #endif
-            #endfor
-        #endfor
-        self.resetBarlabelAndFocus()
-        self.selected = -1
-        plt.draw()
-    #enddef
-
-    ## Handles mouse click events.
-    def onclick(self, event):
-        if self.updating:
-            return
-        #endif
-        if event.inaxes != self.ax:
-            self.updatePriceType()
-            return
-        #endif
-        self.ax.set_title(self.TITLE.format(self.priceType[2], 'Loading...'))
-        self.ax.set_xticklabels(
-            ['{}\n{}'.format(self.ITEM_IDS[i][2], 'Loading...') for i in range(self.TYPES)],
-            ha='center'
-        )
-        plt.draw()
-        thread.start_new_thread(self.updateGraph, ())
+    def updateTickLabel(self, type):
+        if type == 'load':
+            titleFormat = 'Loading...'
+            tickFormats = ['Loading...'] * 7
+        elif type == 'price':
+            titleFormat = self.matsUnitPrices[7][self.priceType]
+            tickFormats = [
+                '{} | {}'.format(self.matsUnitPrices[i][self.priceType], self.prodUnitPrices[i][self.priceType])
+            for i in range(self.TYPES)]
+        #endelif
+        tickLabels = ['{}\n{}'.format(self.prodItems[i]['name'], tickFormats[i]) for i in range(self.TYPES)]
+        self.ax.set_title(self.TITLE.format(self.priceType, titleFormat))
+        self.ax.set_xlabel(self.LABEL.format(self.priceType), labelpad=10)
+        self.ax.set_xticklabels(tickLabels, ha='center')
     #enddef
 #endclass
 
