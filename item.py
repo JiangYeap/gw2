@@ -1,22 +1,22 @@
 class Item:
-    def __init__(self, id, name):
-        self.__id = id
-        self.__name = name
+    def __init__(self, info):
+        self._id = info[0]
+        self._name = info[1]
     #enddef
 
     def __getitem__(self, key):
         dict = {
-            'id': self.__id,
-            'name': self.__name
+            'id': self._id,
+            'name': self._name
         }
         return dict[key]
     #enddef
 
-    def setId(self, newId):
-        self.__id = newId
+    def set_id(self, newId):
+        self._id = newId
     #enddef
 
-    def setName(self, newName):
-        self.__name = newName
+    def set_name(self, newName):
+        self._name = newName
     #enddef
 #endclass
