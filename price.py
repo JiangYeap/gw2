@@ -27,8 +27,8 @@ class Price(object):
 
 class PriceComp(object):
     def __init__(self, ordr_price, inst_price):
-        assert int(ordr_price) > 0
-        assert int(inst_price) > 0
+        assert int(ordr_price) >= 0
+        assert int(inst_price) >= 0
         self._ordr_price = ordr_price
         self._inst_price = inst_price
 

@@ -1,6 +1,6 @@
 from __future__ import division
-from merchant import *
-from item import *
+from merchant import Merchant
+from item import Item
 
 import thread
 import numpy as np
@@ -9,7 +9,7 @@ import matplotlib.patches as patch
 
 class T6Graph:
     N_TYPE = 7
-    N_BAR = 4
+    N_CLS = 4
     WIDTH = 0.16
     LOAD = 'Loading...'
     TITLE = 'T6 Trophy Crafting Profit Per Stack\nDust B{}: {}'
@@ -35,11 +35,11 @@ class T6Graph:
 
     def _init_graph(self):
         self._all_bars = []
-        for i in range(self.N_BAR):
-            sub_bars_pos = [j + i * self.WIDTH for j in range(self.N_TYPE)]
-            sub_bars = self._ax.bar(sub_bars_pos, [i] * self.N_TYPE, self.WIDTH,
-                                    color=self.COLOR_CATEGORY[i], bottom=0)
-            self._all_bars.append(sub_bars)
+        for i in range(self.N_CLS):
+            bar_cls_pos = [j + i * self.WIDTH for j in range(self.N_TYPE)]
+            bar_cls = self._ax.bar(bar_cls_pos, [i] * self.N_TYPE, self.WIDTH,
+                                   color=self.COLOR_CATEGORY[i], bottom=0)
+            self._all_bars.append(bar_cls)
         self._bar_annots = [self._ax.text(i, i, '', ha='center', va='center')
                             for i in range(self.N_TYPE)]
         self._ax.set_title(self.TITLE)
@@ -54,7 +54,7 @@ class T6Graph:
     def _update_graph(self):
         self._updating = True
         self._blm.update_prices()
-        for i in range(self.N_BAR):
+        for i in range(self.N_CLS):
             for j in range(self.N_TYPE):
                 rect = self._all_bars[i].patches[j]
                 rect.set_height(self._blm.get_net_profit()[j][i])
@@ -65,32 +65,9 @@ class T6Graph:
         plt.draw()
         self._updating = False
 
-    def _show_loading_labels(self):
-        prod_names = [item['name'] for item in self._blm.get_prod_item()]
-        tick_labels = [self.T_LABEL.format(prod_names[i], self.LOAD)
-                       for i in range(self.N_TYPE)]
-        self._ax.set_title(self.TITLE.format(self._price_type, self.LOAD))
-        self._ax.set_xlabel(self.X_LABEL.format(self._price_type), labelpad=10)
-        self._ax.set_xticklabels(tick_labels, ha='center')
-
-    def _show_unit_price_labels(self):
-        dust_up = self._blm.get_dust_unit_price()[self._price_type]
-        mats_ups = [item_up[self._price_type]
-                    for item_up in self._blm.get_mats_unit_price()]
-        prod_ups = [item_up[self._price_type]
-                    for item_up in self._blm.get_prod_unit_price()]
-        prod_names = [item['name'] for item in self._blm.get_prod_item()]
-        tick_labels = []
-        for i in range(self.N_TYPE):
-            mats_prod = '{} | {}'.format(mats_ups[i], prod_ups[i])
-            tick_labels.append(self.T_LABEL.format(prod_names[i], mats_prod))
-        self._ax.set_title(self.TITLE.format(self._price_type, dust_up))
-        self._ax.set_xlabel(self.X_LABEL.format(self._price_type), labelpad=10)
-        self._ax.set_xticklabels(tick_labels, ha='center')
-
     def _onhover(self, event):
         hovered = False
-        for i in range(self.N_BAR):
+        for i in range(self.N_CLS):
             for rect in self._all_bars[i]:
                 contains, attrd = rect.contains(event)
                 if contains:
@@ -113,10 +90,18 @@ class T6Graph:
         plt.draw()
         thread.start_new_thread(self._update_graph, ())
 
+    def _show_loading_labels(self):
+        prod_names = [item['name'] for item in self._blm.get_prod_item()]
+        tick_labels = [self.T_LABEL.format(prod_names[i], self.LOAD)
+                       for i in range(self.N_TYPE)]
+        self._ax.set_title(self.TITLE.format(self._price_type, self.LOAD))
+        self._ax.set_xlabel(self.X_LABEL.format(self._price_type), labelpad=10)
+        self._ax.set_xticklabels(tick_labels, ha='center')
+
     def _annotate_bars(self, index):
-        sub_bars = self._all_bars[index]
+        bar_cls = self._all_bars[index]
         for i in range(self.N_TYPE):
-            rect = sub_bars[i]
+            rect = bar_cls[i]
             rect_annot = self._bar_annots[i]
             rect_width = rect.get_width()
             rect_height = rect.get_height()
@@ -127,14 +112,14 @@ class T6Graph:
         #endfor
 
     def _highlight_bars(self, index):
-        for i in range(self.N_BAR):
-            sub_bars = self._all_bars[i]
+        for i in range(self.N_CLS):
+            bar_cls = self._all_bars[i]
             if index != i:
-                for rect in sub_bars:
+                for rect in bar_cls:
                     rect.set_facecolor(self.COLOR_CATEGORY[i] + self.ALPHA)
                 #endfor
             elif index == i:
-                for rect in sub_bars:
+                for rect in bar_cls:
                     rect.set_facecolor(self.COLOR_CATEGORY[i])
                 #endfor
             #endelif
@@ -143,12 +128,27 @@ class T6Graph:
     def _hide_bar_focus(self):
         for bar_label in self._bar_annots:
             bar_label.set_text('')
-        for i in range(self.N_BAR):
-            sub_bars = self._all_bars[i]
-            for rect in sub_bars:
+        for i in range(self.N_CLS):
+            bar_cls = self._all_bars[i]
+            for rect in bar_cls:
                 rect.set_facecolor(self.COLOR_CATEGORY[i])
             #endfor
         #endfor
+
+    def _show_unit_price_labels(self):
+        dust_up = self._blm.get_dust_unit_price()[self._price_type]
+        mats_ups = [item_up[self._price_type]
+                    for item_up in self._blm.get_mats_unit_price()]
+        prod_ups = [item_up[self._price_type]
+                    for item_up in self._blm.get_prod_unit_price()]
+        prod_names = [item['name'] for item in self._blm.get_prod_item()]
+        tick_labels = []
+        for i in range(self.N_TYPE):
+            mats_prod = '{} | {}'.format(mats_ups[i], prod_ups[i])
+            tick_labels.append(self.T_LABEL.format(prod_names[i], mats_prod))
+        self._ax.set_title(self.TITLE.format(self._price_type, dust_up))
+        self._ax.set_xlabel(self.X_LABEL.format(self._price_type), labelpad=10)
+        self._ax.set_xticklabels(tick_labels, ha='center')
 
     def _change_price_type(self):
         if self._updating:
@@ -194,11 +194,8 @@ class T6BlackLionMerchant(Merchant):
         if self._fixed_dust_price is None:
             dp = self.trade('B', self._dust_item, self._dust_qty)
         else:
-            fdp = int(self._fixed_dust_price)
-            assert fdp >= 0
-            tp = {'O': fdp * self._dust_qty, 'I': fdp * self._dust_qty}
-            up = {'O': fdp, 'I': fdp}
-            dp = {'T': tp, 'U': up}
+            fdp = self._fixed_dust_price
+            dp = self.fixed_trade('B', self._dust_item, self._dust_qty, fdp)
         self._net_profit = []
         self._dust_unit_price = dp['U']
         self._mats_unit_price = []
