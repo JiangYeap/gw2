@@ -187,9 +187,9 @@ class T6Graph:
             if abs_value < 0.1:
                 trend_str = r' $_{{\bf{{\textasciitilde}}}}$'
             elif trend < 0:
-                trend_str = r' $_{{\bf{{- {}\%}}}}$'.format(rounded)
+                trend_str = r'$_{{\bf{{- {}\%}}}}$'.format(rounded)
             else:
-                trend_str = r' $_{{\bf{{+ {}\%}}}}$'.format(rounded)
+                trend_str = r'$_{{\bf{{+ {}\%}}}}$'.format(rounded)
             #endelse
         except TypeError:
             trend_str = ''

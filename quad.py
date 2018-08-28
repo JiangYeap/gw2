@@ -20,6 +20,11 @@ class Quad(object):
         unit_price = self.get_inst_price() / num
         return Quad(totl_price, unit_price)
 
+    def __abs__(self):
+        totl_price = self.get_totl_price()
+        unit_price = self.get_inst_price()
+        return Quand(abs(totl_price), abs(unit_price))
+
     def __getitem__(self, key):
         dict = {
             't': self._totl_price,
@@ -67,6 +72,11 @@ class QuadComp(object):
             ordr_price = self.get_ordr_price() / other.get_ordr_price()
             inst_price = self.get_inst_price() / other.get_inst_price()
         return QuadComp(ordr_price, inst_price)
+
+    def __abs__(self):
+        ordr_price = self.get_ordr_price()
+        inst_price = self.get_inst_price()
+        return QuadComp(abs(ordr_price), abs(inst_price))
 
     def __getitem__(self, key):
         dict = {

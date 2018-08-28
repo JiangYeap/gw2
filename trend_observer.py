@@ -13,8 +13,9 @@ class TrendObserver(object):
           self._start_value = value
           self._start_time = time.time()
       else:
+          abs_start_value = abs(self._start_value)
           end_time = time.time()
-          self._trend = (value - self._start_value) * 100 / self._start_value
+          self._trend = (value - self._start_value) * 100 / abs_start_value
           self._interval = end_time - self._start_time
           self._start_value = value
           self._start_time = end_time
