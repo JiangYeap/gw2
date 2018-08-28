@@ -176,9 +176,9 @@ class T6Graph:
 
     def _format_trend(self, trend):
         try:
-            abs = np.abs(trend)
-            rounded = round(abs, 1)
-            if abs < 0.1:
+            abs_value = abs(trend)
+            rounded = round(abs_value, 1)
+            if abs_value < 0.1:
                 trend_str = r' $_{{\bf{{\textasciitilde}}}}$'
             elif trend < 0:
                 trend_str = r' $_{{\bf{{- {}\%}}}}$'.format(rounded)
