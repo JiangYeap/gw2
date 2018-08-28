@@ -1,5 +1,5 @@
 from __future__ import division
-from price import Price, PriceComp
+from quad import Quad, QuadComp
 import requests, json
 
 class Merchant(object):
@@ -19,11 +19,11 @@ class Merchant(object):
             modifier = 0.85
         ordr_totl = item_ordr * quantity
         inst_totl = self._complete_instant(item_inst, quantity)
-        ordr_unit = int(round((ordr_totl / quantity)))
-        inst_unit = int(round((inst_totl / quantity)))
-        totl_price = PriceComp(ordr_totl * modifier, inst_totl * modifier)
-        unit_price = PriceComp(ordr_unit, inst_unit)
-        return Price(totl_price, unit_price)
+        ordr_unit = self._round_whole((ordr_totl / quantity))
+        inst_unit = self._round_whole((inst_totl / quantity))
+        totl_price = QuadComp(ordr_totl * modifier, inst_totl * modifier)
+        unit_price = QuadComp(ordr_unit, inst_unit)
+        return Quad(totl_price, unit_price)
 
     def fixed_trade(self, trade_type, item, quantity, price):
         assert int(price) >= 0
@@ -34,14 +34,14 @@ class Merchant(object):
             modifier = 0.85
         ordr_totl = price * quantity
         inst_totl = price * quantity
-        ordr_unit = int(round(price))
-        ordr_unit = int(round(price))
-        totl_price = PriceComp(ordr_totl * modifier, inst_totl * modifier)
-        unit_price = PriceComp(ordr_unit, inst_unit)
-        return Price(totl_price, unit_price)
+        ordr_unit = self._round_whole(price)
+        ordr_unit = self._round_whole(price)
+        totl_price = QuadComp(ordr_totl * modifier, inst_totl * modifier)
+        unit_price = QuadComp(ordr_unit, inst_unit)
+        return Quad(totl_price, unit_price)
 
     def currency_conv(self, amount):
-        copper = int(round(amount % 100))
+        copper = self._round_whole(amount % 100)
         silver = int((amount % 10000) / 100)
         gold = int(amount / 10000)
         sign = '+' if amount >= 0 else '-'
@@ -64,4 +64,7 @@ class Merchant(object):
                 remainder -= curr_item['quantity']
             #endelse
         return value
+
+    def _round_whole(self, num):
+        return int(round(num))
     #enddef
