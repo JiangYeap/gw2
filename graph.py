@@ -46,6 +46,7 @@ class T6Graph:
             self._all_bars.append(bar_cls)
         self._bar_annots = [self._ax.text(i, i, '', ha='center', va='center')
                             for i in range(self.N_TYPE)]
+        self._load_lbls = []
         self._ax.set_title(self.TITLE)
         self._ax.set_ylabel('Net Profit')
         self._ax.set_xlabel('Trophy Type')
@@ -87,14 +88,18 @@ class T6Graph:
 
     def _annotate_bars(self, index):
         bar_cls = self._all_bars[index]
+        bar_trds = self._blm.get_profit_trends()
         for i in range(self.N_TYPE):
             rect = bar_cls[i]
             rect_annot = self._bar_annots[i]
             rect_width = rect.get_width()
             rect_height = rect.get_height()
             x_pos = rect.get_x() + rect_width /  2
-            y_pos = rect_height + np.sign(rect_height) * 300
-            rect_annot.set_text(self._blm.currency_conv(rect_height))
+            y_pos = rect_height + np.sign(rect_height) * 400
+            bar_profit = self._blm.currency_conv(rect_height)
+            cls_bar_trd = bar_trds[i][index] if bar_trds is not None else None
+            annot_text = bar_profit + self._format_trend(cls_bar_trd)
+            rect_annot.set_text(annot_text)
             rect_annot.set_position((x_pos, y_pos))
         #endfor
 
@@ -141,12 +146,13 @@ class T6Graph:
         #endif
 
     def _show_loading_labels(self):
-        prod_names = [item['name'] for item in self._blm.get_prod_items()]
-        tick_labels = [self.T_LABEL.format(prod_names[i], self.LOAD)
-                       for i in range(self.N_TYPE)]
+        if not self._load_lbls:
+            prod_names = [item['name'] for item in self._blm.get_prod_items()]
+            self._load_lbls = [self.T_LABEL.format(prod_names[i], self.LOAD)
+                               for i in range(self.N_TYPE)]
         self._ax.set_title(self.TITLE.format(self._price_type, self.LOAD))
         self._ax.set_xlabel(self.X_LABEL.format(self._price_type), labelpad=10)
-        self._ax.set_xticklabels(tick_labels, ha='center')
+        self._ax.set_xticklabels(self._load_lbls, ha='center')
 
     def _show_unit_price_labels(self):
         self._update_unit_trends_labels()
@@ -193,6 +199,7 @@ class T6Graph:
 
 class T6BlackLionMerchant(Merchant):
     N_TYPE = 7
+    N_CLS = 4
     DUST_ID = [24277, 'Pile of Crystalline Dust']
     MATS_ID = [
         [24294, 'Vial of Potent Blood'],
@@ -222,6 +229,12 @@ class T6BlackLionMerchant(Merchant):
         self._mats_items = [Item(self.MATS_ID[i]) for i in range(self.N_TYPE)]
         self._prod_items = [Item(self.PROD_ID[i]) for i in range(self.N_TYPE)]
 
+    def init_trend_observers(self):
+        self._dust_to = TrendObserver()
+        self._mats_tos = [TrendObserver() for i in range(self.N_TYPE)]
+        self._prod_tos = [TrendObserver() for i in range(self.N_TYPE)]
+        self._profit_to = TrendObserver()
+
     def update_prices(self):
         if self._fixed_dust_price is None:
             dp = self.trade('B', self._dust_item, self._dust_qty)
@@ -243,11 +256,12 @@ class T6BlackLionMerchant(Merchant):
             self._net_profit[i][3] = pp['T']['I'] - mp['T']['I'] - dp['T']['I']
         #endfor
 
-    def get_dust_item(self):
-        return self._dust_item
-
-    def get_mats_items(self):
-        return self._mats_items
+    def compute_all_trends(self):
+        self._dust_to.compute_trend(self._dust_unit_price)
+        for i in range(self.N_TYPE):
+            self._mats_tos[i].compute_trend(self._mats_unit_prices[i])
+            self._prod_tos[i].compute_trend(self._prod_unit_prices[i])
+        self._profit_to.compute_trend(self._net_profit)
 
     def get_prod_items(self):
         return self._prod_items
@@ -264,23 +278,6 @@ class T6BlackLionMerchant(Merchant):
     def get_prod_unit_prices(self):
         return self._prod_unit_prices
 
-    def init_trend_observers(self):
-        self._profit_tos = TrendObserver()
-        self._dust_to = TrendObserver()
-        self._mats_tos = [TrendObserver() for i in range(self.N_TYPE)]
-        self._prod_tos = [TrendObserver() for i in range(self.N_TYPE)]
-
-    def compute_all_trends(self):
-        self._profit_tos.compute_trend(self._net_profit)
-        self._dust_to.compute_trend(self._dust_unit_price)
-        for i in range(self.N_TYPE):
-            self._mats_tos[i].compute_trend(self._mats_unit_prices[i])
-            self._prod_tos[i].compute_trend(self._prod_unit_prices[i])
-        #endfor
-
-    def get_profit_trend(self):
-        return self._profit_tos.get_trend()
-
     def get_dust_trend(self):
         return self._dust_to.get_trend()
 
@@ -289,6 +286,9 @@ class T6BlackLionMerchant(Merchant):
 
     def get_prod_trends(self):
         return [pto.get_trend() for pto in self._prod_tos]
+
+    def get_profit_trends(self):
+        return self._profit_to.get_trend()
     #enddef
 
 T6Graph()

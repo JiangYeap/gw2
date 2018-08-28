@@ -42,9 +42,10 @@ class Merchant(object):
 
     def currency_conv(self, amount):
         abs_value = abs(amount)
-        copper = self._round_whole(abs_value % 100)
-        silver = int((abs_value % 10000) / 100)
-        gold = int(abs_value / 10000)
+        rounded = self._round_whole(abs_value)
+        copper = rounded % 100
+        silver = int((rounded % 10000) / 100)
+        gold = int(rounded / 10000)
         sign = '+' if amount >= 0 else '-'
         return '{} {}g {}s {}c'.format(sign, gold, silver, copper)
 
