@@ -5,7 +5,7 @@ from trend_observer import TrendObserver
 from merchant import Merchant
 from item import Item
 
-import thread
+import threading
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as patch
@@ -27,14 +27,17 @@ class T6Graph:
     COLOR_CATEGORY = ['#2ecc71', '#3498db', '#f1c40f', '#e74c3c']
     ALPHA = '94'
 
-    def __init__(self, stacks=1, fixed_dust_price=None):
+    def __init__(self, stacks=1, fixed_dust_price=None, interval=None):
         self._fig, self._ax = plt.subplots(figsize=(14, 7))
         self._blm = T6BlackLionMerchant(stacks, fixed_dust_price)
         self._blm.init_trend_observers()
         self._price_type = 'O'
+        self._interval = interval
         self._updating = False
+        self._run_loop = False
         self._init_graph()
         self._update_graph()
+        self._start_loop()
         plt.show()
 
     def _init_graph(self):
@@ -70,6 +73,19 @@ class T6Graph:
         self._show_unit_price_labels()
         plt.draw()
         self._updating = False
+
+    def _start_loop(self):
+        if self._interval is not None:
+            if not self._run_loop:
+                self._run_loop = True
+                loop_thread = threading.Timer(self._interval, self._start_loop)
+                loop_thread.start()
+            else:
+                self._refresh_graph()
+                loop_thread = threading.Timer(self._interval, self._start_loop)
+                loop_thread.start()
+            #endelse
+        #endif
 
     def _onhover(self, event):
         hovered = False
@@ -128,21 +144,25 @@ class T6Graph:
         #endfor
 
     def _onclick(self, event):
-        if not self._updating:
-            if event.inaxes != self._ax:
-                self._toggle_price_type()
-            else:
-                self._show_loading_labels()
-                plt.draw()
-                thread.start_new_thread(self._update_graph, ())
-            #endelse
-        #endif
+        if event.inaxes != self._ax:
+            self._toggle_price_type()
+        else:
+            self._refresh_graph()
+        #endelse
 
     def _toggle_price_type(self):
         if not self._updating:
             self._price_type = 'I' if self._price_type == 'O' else 'O'
             self._show_unit_price_labels()
             plt.draw()
+        #endif
+
+    def _refresh_graph(self):
+        if not self._updating:
+            self._show_loading_labels()
+            plt.draw()
+            update_thread = threading.Thread(target=self._update_graph)
+            update_thread.start()
         #endif
 
     def _show_loading_labels(self):
@@ -291,4 +311,4 @@ class T6BlackLionMerchant(Merchant):
         return self._profit_to.get_trend()
     #enddef
 
-T6Graph()
+T6Graph(interval=120)
